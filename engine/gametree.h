@@ -310,13 +310,4 @@ public:
  * - With alpha-beta pruning: ~100 million nodes (manageable)
  * - Memory: ~20 GB (still large, but modern systems can handle)
  * 
- * EDUCATIONAL VALUE:
- * This structure demonstrates:
- * ✓ Tree ADT (Abstract Data Type)
- * ✓ Recursive traversal patterns
- * ✓ Parent pointers for path reconstruction
- * ✓ Space-time tradeoffs (storing full tree)
- * ✓ Analysis of algorithm behavior
  */
-
-#endif // GAMETREE_H

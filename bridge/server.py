@@ -6,7 +6,9 @@ ChessMind Bridge — FastAPI server
 - Computes evaluation bar score
 """
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 import subprocess
@@ -15,6 +17,8 @@ import chess
 import chess.engine
 import os
 import re
+import threading
+import queue
 from typing import Optional
 
 app = FastAPI(title="ChessMind Bridge")
@@ -25,6 +29,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ─── Static files & Routes ────────────────────────────────────────────────────
+FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
+
+@app.get("/")
+async def get_index():
+    return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+
+# Mount the entire frontend directory just in case there are images/css
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 # ─── Engine paths ─────────────────────────────────────────────────────────────
 CHESSMIND_PATH = os.environ.get("CHESSMIND_BIN", "./chessmind")
@@ -49,19 +63,31 @@ class UCIEngine:
             text=True,
             bufsize=1,
         )
+        self._q: queue.Queue = queue.Queue()
+        self._reader_thread = threading.Thread(target=self._reader, daemon=True)
+        self._reader_thread.start()
         self._send("uci")
         self._wait_for("uciok")
+
+    def _reader(self):
+        """Background thread: continuously drain stdout into a queue."""
+        try:
+            for line in self.process.stdout:
+                self._q.put(line.strip())
+        except Exception:
+            pass
+        self._q.put(None)  # EOF sentinel
 
     def _send(self, cmd: str):
         self.process.stdin.write(cmd + "\n")
         self.process.stdin.flush()
 
     def _read_line(self, timeout=10.0) -> str:
-        import select
-        r, _, _ = select.select([self.process.stdout], [], [], timeout)
-        if r:
-            return self.process.stdout.readline().strip()
-        return ""
+        try:
+            line = self._q.get(timeout=timeout)
+            return line if line is not None else ""
+        except queue.Empty:
+            return ""
 
     def _wait_for(self, token: str, timeout=10.0) -> list[str]:
         lines = []

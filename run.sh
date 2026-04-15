@@ -34,7 +34,7 @@ fi
 # Start bridge in background
 echo -e "${CYAN}→${NC} Starting bridge on http://localhost:$PORT ..."
 cd "$BRIDGE_DIR"
-uvicorn server:app --host 0.0.0.0 --port $PORT --log-level warning &
+python3 -m uvicorn server:app --host 0.0.0.0 --port $PORT --log-level warning &
 BRIDGE_PID=$!
 
 # Wait for bridge to be ready
@@ -48,12 +48,13 @@ fi
 
 # Open browser
 echo -e "${CYAN}→${NC} Opening game in browser..."
+URL="http://localhost:8000"
 if command -v xdg-open &>/dev/null; then
-    xdg-open "$FRONTEND" 2>/dev/null &
+    xdg-open "$URL" 2>/dev/null &
 elif command -v open &>/dev/null; then
-    open "$FRONTEND" 2>/dev/null &
+    open "$URL" 2>/dev/null &
 else
-    echo -e "${CYAN}→${NC} Open manually: $FRONTEND"
+    echo -e "${CYAN}→${NC} Open manually: $URL"
 fi
 
 echo ""
@@ -68,7 +69,7 @@ while true; do
     if ! kill -0 $BRIDGE_PID 2>/dev/null; then
         echo "Bridge crashed, restarting..."
         cd "$BRIDGE_DIR"
-        uvicorn server:app --host 0.0.0.0 --port $PORT --log-level warning &
+        python3 -m uvicorn server:app --host 0.0.0.0 --port $PORT --log-level warning &
         BRIDGE_PID=$!
     fi
     sleep 3

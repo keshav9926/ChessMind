@@ -412,5 +412,3 @@ private:
      */
     std::string buildPV(Board& b, int depth);
 };
-
-#endif // SEARCH_H
