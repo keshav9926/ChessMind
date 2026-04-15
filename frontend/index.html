@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ChessMind</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0f;
+  --surface:#12121a;
+  --surface2:#1a1a28;
+  --border:#2a2a3e;
+  --accent:#7c6af7;
+  --accent2:#a78bfa;
+  --green:#22c55e;
+  --yellow:#eab308;
+  --red:#ef4444;
+  --text:#e2e8f0;
+  --muted:#64748b;
+  --white-sq:#f0d9b5;
+  --dark-sq:#b58863;
+  --last-move-light:rgba(124,101,247,0.35);
+  --last-move-dark:rgba(124,101,247,0.55);
+  --hint1:rgba(34,197,94,0.7);
+  --hint2:rgba(234,179,8,0.65);
+  --hint3:rgba(249,115,22,0.55);
+}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+.mono{font-family:'Space Mono',monospace}
+
+/* ── Layout ── */
+.app{display:grid;grid-template-columns:200px 1fr 280px;grid-template-rows:56px 1fr;min-height:100vh;gap:0}
+.header{grid-column:1/-1;display:flex;align-items:center;gap:16px;padding:0 24px;border-bottom:1px solid var(--border);background:var(--surface)}
+.logo{font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:var(--accent2);letter-spacing:-1px}
+.logo span{color:var(--text)}
+.header-right{margin-left:auto;display:flex;gap:10px;align-items:center}
+
+.left-panel{background:var(--surface);border-right:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;gap:20px}
+.center{display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg)}
+.right-panel{background:var(--surface);border-left:1px solid var(--border);padding:20px 16px;display:flex;flex-direction:column;gap:16px;overflow-y:auto}
+
+/* ── Board ── */
+.board-wrap{display:flex;align-items:center;gap:8px}
+.eval-bar-wrap{display:flex;flex-direction:column;height:var(--board-size,480px);width:18px;border-radius:9px;overflow:hidden;border:1px solid var(--border);position:relative}
+.eval-bar-black{background:#1e1e2e;transition:height .6s ease}
+.eval-bar-white{background:#f0d9b5;transition:height .6s ease}
+.eval-score{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);text-align:center;margin-top:4px}
+.board-col{display:flex;flex-direction:column;gap:4px}
+.coords-row{display:flex;gap:0}
+.board-container{position:relative;border-radius:4px;overflow:hidden;box-shadow:0 0 0 2px var(--border),0 20px 60px rgba(0,0,0,.7)}
+.board-grid{display:grid;grid-template-columns:repeat(8,1fr)}
+.square{width:60px;height:60px;display:flex;align-items:center;justify-content:center;font-size:42px;cursor:pointer;position:relative;transition:filter .1s}
+.square:hover{filter:brightness(1.15)}
+.square.light{background:var(--white-sq)}
+.square.dark{background:var(--dark-sq)}
+.square.selected{box-shadow:inset 0 0 0 4px rgba(124,101,247,.9)}
+.square.last-from.light,.square.last-to.light{background:var(--last-move-light)}
+.square.last-from.dark,.square.last-to.dark{background:var(--last-move-dark)}
+.square.in-check{box-shadow:inset 0 0 0 4px var(--red),0 0 20px var(--red)}
+.hint-dot{position:absolute;width:24px;height:24px;border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;opacity:.85}
+.legal-dot{position:absolute;width:16px;height:16px;border-radius:50%;background:rgba(124,101,247,.7);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+.coord-file{width:60px;text-align:center;font-size:10px;color:var(--muted);font-family:'Space Mono',monospace}
+.coord-rank{width:16px;height:60px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--muted);font-family:'Space Mono',monospace}
+.ranks-col{display:flex;flex-direction:column}
+.files-row{display:flex;margin-left:20px}
+
+/* ── Captured pieces ── */
+.captured{display:flex;flex-wrap:wrap;gap:1px;min-height:22px;font-size:18px}
+
+/* ── Sections ── */
+.section-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-family:'Space Mono',monospace;margin-bottom:8px}
+.btn{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;border:1px solid;transition:all .15s;font-family:'DM Sans',sans-serif}
+.btn-primary{background:var(--accent);color:white;border-color:var(--accent)}
+.btn-primary:hover{background:var(--accent2)}
+.btn-ghost{background:transparent;color:var(--text);border-color:var(--border)}
+.btn-ghost:hover{background:var(--surface2)}
+.btn-danger{background:transparent;color:var(--red);border-color:var(--red)}
+.btn-danger:hover{background:rgba(239,68,68,.1)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+select{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;width:100%}
+
+/* ── Hints ── */
+.hint-card{border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;transition:all .15s;background:var(--surface2)}
+.hint-card:hover{border-color:var(--accent);background:rgba(124,106,247,.08)}
+.hint-rank{font-size:10px;font-family:'Space Mono',monospace;margin-bottom:4px}
+.hint-rank.r1{color:var(--green)} .hint-rank.r2{color:var(--yellow)} .hint-rank.r3{color:var(--text)}
+.hint-move{font-size:18px;font-family:'Space Mono',monospace;font-weight:700;color:var(--text)}
+.hint-score{font-size:12px;color:var(--muted);margin-top:2px}
+.hint-cont{font-size:11px;color:var(--muted);margin-top:4px;font-family:'Space Mono',monospace}
+
+/* ── Engine stats ── */
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border)}
+.stat-row:last-child{border-bottom:none}
+.stat-label{font-size:12px;color:var(--muted)}
+.stat-value{font-size:12px;font-family:'Space Mono',monospace;color:var(--accent2)}
+.thinking-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ── Move list ── */
+.move-list{font-size:12px;font-family:'Space Mono',monospace;display:flex;flex-direction:column;gap:2px;max-height:180px;overflow-y:auto}
+.move-row{display:flex;gap:8px;padding:2px 4px;border-radius:4px}
+.move-row:hover{background:var(--surface2)}
+.move-num{color:var(--muted);width:24px}
+.move-san{color:var(--text);cursor:pointer;padding:0 4px;border-radius:3px}
+.move-san:hover{background:var(--accent);color:white}
+
+/* ── Status banner ── */
+.status{padding:8px 12px;border-radius:8px;font-size:13px;font-weight:500;text-align:center}
+.status.check{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.status.thinking{background:rgba(124,101,247,.1);color:var(--accent2);border:1px solid rgba(124,101,247,.2)}
+.status.info{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.status.win{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+
+/* ── Piece unicode ── */
+.piece{user-select:none;line-height:1;pointer-events:none}
+
+/* ── PV line ── */
+.pv-line{font-size:11px;font-family:'Space Mono',monospace;color:var(--muted);word-break:break-all;line-height:1.6;padding:6px 8px;background:var(--surface2);border-radius:6px;border:1px solid var(--border)}
+
+/* ── Connection status ── */
+.conn-dot{width:8px;height:8px;border-radius:50%}
+.conn-dot.connected{background:var(--green)}
+.conn-dot.disconnected{background:var(--red)}
+.conn-dot.connecting{background:var(--yellow);animation:pulse 1s infinite}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback}=React;
+
+// ─── Chess logic (pure JS, no lib needed for display) ─────────────────────────
+const PIECES={
+  'P':'♙','N':'♘','B':'♗','R':'♖','Q':'♕','K':'♔',
+  'p':'♟','n':'♞','b':'♝','r':'♜','q':'♛','k':'♚'
+};
+const PIECE_VALUES={p:1,n:3,b:3,r:5,q:9};
+
+function parseFen(fen){
+  const [pos,turn,castle,ep]=fen.split(' ');
+  const board=Array(64).fill(null);
+  let sq=56;
+  for(const c of pos){
+    if(c==='/')sq-=16;
+    else if(c>='1'&&c<='8')sq+=+c;
+    else{board[sq++]=c;}
+  }
+  return{board,turn,castle,ep};
+}
+
+function squareToCoord(sq){
+  return (String.fromCharCode(97+(sq&7)))+(''+(1+(sq>>3)));
+}
+
+function coordToSquare(coord){
+  return (coord.charCodeAt(1)-49)*8+(coord.charCodeAt(0)-97);
+}
+
+function uciToSquares(uci){
+  if(!uci||uci.length<4)return[null,null];
+  return[coordToSquare(uci.slice(0,2)),coordToSquare(uci.slice(2,4))];
+}
+
+function getCaptured(fen,prevFen){
+  // Simple: compare piece counts
+  const count=(f,c)=>(f.split('').filter(x=>x===c).length);
+  const pieces='pnbrqPNBRQ';
+  const captured=[];
+  if(!prevFen)return captured;
+  for(const p of pieces){
+    const diff=count(prevFen,p)-count(fen,p);
+    for(let i=0;i<diff;i++)captured.push(p);
+  }
+  return captured;
+}
+
+// ─── WebSocket hook ──────────────────────────────────────────────────────────
+const WS_URL=`ws://localhost:8000/ws/${Math.random().toString(36).slice(2)}`;
+
+function useChessWS(){
+  const ws=useRef(null);
+  const[connected,setConnected]=useState(false);
+  const handlers=useRef({});
+
+  const send=useCallback((data)=>{
+    if(ws.current&&ws.current.readyState===1)
+      ws.current.send(JSON.stringify(data));
+  },[]);
+
+  useEffect(()=>{
+    const connect=()=>{
+      setConnected('connecting');
+      ws.current=new WebSocket(WS_URL);
+      ws.current.onopen=()=>setConnected(true);
+      ws.current.onclose=()=>{setConnected(false);setTimeout(connect,3000);}
+      ws.current.onerror=()=>{};
+      ws.current.onmessage=(e)=>{
+        try{
+          const msg=JSON.parse(e.data);
+          if(handlers.current[msg.type]) handlers.current[msg.type](msg);
+        }catch(err){}
+      };
+    };
+    connect();
+    return()=>ws.current?.close();
+  },[]);
+
+  return{send,connected,handlers:handlers.current};
+}
+
+// ─── Eval bar component ───────────────────────────────────────────────────────
+function EvalBar({evalBar,boardSize}){
+  const cp=evalBar?.score_cp??0;
+  const clamped=Math.max(-600,Math.min(600,cp));
+  // white % = 50 + advantage, scaled to 0-100
+  const whitePct=Math.round(50+(clamped/600)*45);
+  const blackPct=100-whitePct;
+  const label=evalBar?.type==='mate'
+    ?`M${Math.abs(evalBar.mate_in||0)}`
+    :`${cp>=0?'+':''}${(cp/100).toFixed(1)}`;
+
+  return(
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4}}>
+      <div className="eval-bar-wrap" style={{height:boardSize}}>
+        <div className="eval-bar-black" style={{height:`${blackPct}%`}}/>
+        <div className="eval-bar-white" style={{height:`${whitePct}%`}}/>
+      </div>
+      <span className="eval-score mono">{label}</span>
+    </div>
+  );
+}
+
+// ─── Board component ──────────────────────────────────────────────────────────
+function ChessBoard({fen,lastMove,hints,legalMoves,onSquareClick,selected,flipped,inCheck,humanColor}){
+  const{board}=parseFen(fen);
+  const [lastFrom,lastTo]=uciToSquares(lastMove);
+  const hintColors={1:'rgba(34,197,94,.75)',2:'rgba(234,179,8,.7)',3:'rgba(249,115,22,.6)'};
+  const hintMap={};
+  hints.forEach(h=>{ const[,to]=uciToSquares(h.move); if(to!==null)hintMap[to]=h.rank; });
+
+  const ranks=flipped?[0,1,2,3,4,5,6,7]:[7,6,5,4,3,2,1,0];
+  const files=flipped?[7,6,5,4,3,2,1,0]:[0,1,2,3,4,5,6,7];
+
+  const kingPos=board.indexOf(humanColor==='white'?'k':'K');
+  // Find enemy king in check
+  const whiteKing=board.indexOf('K');
+  const blackKing=board.indexOf('k');
+
+  return(
+    <div className="board-col">
+      <div style={{display:'flex'}}>
+        <div className="ranks-col">
+          {ranks.map(r=>(
+            <div className="coord-rank" key={r}>{flipped?r+1:8-r}</div>
+          ))}
+        </div>
+        <div className="board-container">
+          <div className="board-grid" style={{width:480,height:480}}>
+            {ranks.flatMap(r=>files.map(f=>{
+              const sq=r*8+f;
+              const isLight=(r+f)%2===0;
+              const piece=board[sq];
+              const isSelected=selected===sq;
+              const isLastFrom=lastFrom===sq;
+              const isLastTo=lastTo===sq;
+              const isLegal=legalMoves.includes(sq);
+              const hintRank=hintMap[sq];
+              const isInCheckSq=(inCheck&&piece==='k'&&humanColor==='white')||(inCheck&&piece==='K'&&humanColor==='black');
+              return(
+                <div
+                  key={sq}
+                  className={['square',
+                    isLight?'light':'dark',
+                    isSelected?'selected':'',
+                    isLastFrom?'last-from':'',
+                    isLastTo?'last-to':'',
+                    isInCheckSq?'in-check':'',
+                  ].join(' ')}
+                  onClick={()=>onSquareClick(sq)}
+                >
+                  {piece&&<span className="piece">{PIECES[piece]}</span>}
+                  {isLegal&&!piece&&<div className="legal-dot"/>}
+                  {isLegal&&piece&&<div style={{position:'absolute',inset:0,boxShadow:'inset 0 0 0 4px rgba(124,101,247,.7)',pointerEvents:'none'}}/>}
+                  {hintRank&&<div className="hint-dot" style={{background:hintColors[hintRank],boxShadow:`0 0 8px ${hintColors[hintRank]}`}}/>}
+                </div>
+              );
+            }))}
+          </div>
+        </div>
+      </div>
+      <div className="files-row">
+        {files.map(f=>(
+          <div className="coord-file" key={f}>{String.fromCharCode(97+f)}</div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main App ─────────────────────────────────────────────────────────────────
+function App(){
+  const{send,connected,handlers}=useChessWS();
+  const[fen,setFen]=useState('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+  const[gameState,setGameState]=useState(null);
+  const[hints,setHints]=useState([]);
+  const[showHints,setShowHints]=useState(false);
+  const[evalBar,setEvalBar]=useState({score_cp:0,type:'cp'});
+  const[engineInfo,setEngineInfo]=useState(null);
+  const[thinking,setThinking]=useState(false);
+  const[selected,setSelected]=useState(null);
+  const[legalMoves,setLegalMoves]=useState([]);
+  const[lastMove,setLastMove]=useState(null);
+  const[moveHistory,setMoveHistory]=useState([]);
+  const[capturedWhite,setCapturedWhite]=useState([]);
+  const[capturedBlack,setCapturedBlack]=useState([]);
+  const[difficulty,setDifficulty]=useState('hard');
+  const[humanColor,setHumanColor]=useState('white');
+  const[gameStarted,setGameStarted]=useState(false);
+  const[statusMsg,setStatusMsg]=useState('');
+  const[statusType,setStatusType]=useState('info');
+  const prevFen=useRef(null);
+
+  // ── Register WS handlers ──
+  useEffect(()=>{
+    handlers.game_started=(msg)=>{
+      setFen(msg.state.fen);
+      setGameState(msg.state);
+      setEvalBar(msg.eval_bar);
+      setMoveHistory([]);
+      setHints([]);
+      setLastMove(null);
+      setSelected(null);
+      setLegalMoves([]);
+      setGameStarted(true);
+      setStatusMsg('Game started — your turn!');
+      setStatusType('info');
+      prevFen.current=msg.state.fen;
+    };
+    handlers.move_made=(msg)=>{
+      prevFen.current=fen;
+      setFen(msg.state.fen);
+      setGameState(msg.state);
+      setLastMove(msg.move);
+      setEvalBar(msg.eval_bar);
+      setSelected(null);
+      setLegalMoves([]);
+      setHints([]);
+      setShowHints(false);
+      if(msg.engine_info) setEngineInfo(msg.engine_info);
+      setMoveHistory(h=>[...h,{move:msg.move,by:msg.by}]);
+      if(msg.state.is_check) { setStatusMsg('Check!'); setStatusType('check'); }
+      else if(msg.by==='ai') { setStatusMsg('Your turn'); setStatusType('info'); }
+      else { setStatusMsg('AI is thinking...'); setStatusType('thinking'); }
+    };
+    handlers.ai_thinking=(msg)=>{ setThinking(msg.thinking); if(!msg.thinking&&gameState&&!gameState.is_checkmate)setStatusMsg('Your turn'); };
+    handlers.hints=(msg)=>{ setHints(msg.hints||[]); setShowHints(true); };
+    handlers.eval_update=(msg)=>setEvalBar(msg.eval_bar);
+    handlers.game_over=(msg)=>{
+      setGameState(msg.state);
+      if(msg.state.is_checkmate){
+        const winner=msg.state.turn==='white'?'Black':'White';
+        setStatusMsg(`Checkmate! ${winner} wins 🏆`);
+        setStatusType('win');
+      } else if(msg.state.resigned){
+        setStatusMsg('You resigned');setStatusType('info');
+      } else {
+        setStatusMsg('Draw!');setStatusType('info');
+      }
+    };
+    handlers.error=(msg)=>console.warn('Server error:',msg.msg);
+  });
+
+  const startGame=()=>{
+    send({action:'new_game',difficulty,human_color:humanColor});
+  };
+
+  const handleSquareClick=(sq)=>{
+    if(!gameStarted||thinking||!gameState)return;
+    const{board,turn}=parseFen(fen);
+    const isMyTurn=(turn==='w'&&humanColor==='white')||(turn==='b'&&humanColor==='black');
+    if(!isMyTurn)return;
+    const piece=board[sq];
+    const isMyPiece=piece&&((humanColor==='white'&&piece===piece.toUpperCase())||(humanColor==='black'&&piece===piece.toLowerCase()));
+
+    if(selected!==null){
+      if(legalMoves.includes(sq)){
+        // Make move
+        let uci=squareToCoord(selected)+squareToCoord(sq);
+        const p=board[selected];
+        // Promotion check (simplified: always promote to queen)
+        if((p==='P'&&sq>=56)||(p==='p'&&sq<=7)) uci+='q';
+        send({action:'human_move',move:uci});
+        setSelected(null);setLegalMoves([]);
+      } else if(isMyPiece){
+        setSelected(sq);
+        computeLegalMoves(sq,board,humanColor==='white');
+      } else {
+        setSelected(null);setLegalMoves([]);
+      }
+    } else {
+      if(isMyPiece){
+        setSelected(sq);
+        computeLegalMoves(sq,board,humanColor==='white');
+      }
+    }
+  };
+
+  const computeLegalMoves=(sq,board,isWhite)=>{
+    // Simple highlight: show all squares the piece could move to
+    // Real legality checked by engine; this is just UI feedback
+    const moves=[];
+    const piece=board[sq]?.toLowerCase();
+    const file=sq&7,rank=sq>>3;
+    const isOwn=(p)=>p&&((isWhite&&p===p.toUpperCase())||((!isWhite)&&p===p.toLowerCase()));
+    const isEnem=(p)=>p&&!isOwn(p);
+
+    const addSq=(s)=>{ if(s>=0&&s<64&&!isOwn(board[s]))moves.push(s); };
+    const slide=(dFile,dRank)=>{
+      let f=file+dFile,r=rank+dRank;
+      while(f>=0&&f<8&&r>=0&&r<8){
+        const s=r*8+f;
+        if(isOwn(board[s]))break;
+        moves.push(s);
+        if(isEnem(board[s]))break;
+        f+=dFile;r+=dRank;
+      }
+    };
+
+    if(piece==='p'){
+      const dir=isWhite?1:-1;
+      const startR=isWhite?1:6;
+      const s1=sq+dir*8;
+      if(s1>=0&&s1<64&&!board[s1]){moves.push(s1);if(rank===startR){const s2=sq+dir*16;if(!board[s2])moves.push(s2);}}
+      [-1,1].forEach(d=>{const tf=file+d,tr=rank+dir;if(tf>=0&&tf<8&&tr>=0&&tr<8){const ts=tr*8+tf;if(isEnem(board[ts])||ts===coordToSquare(fen.split(' ')[3]||''))moves.push(ts);}});
+    } else if(piece==='n'){
+      [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]].forEach(([df,dr])=>{
+        const nf=file+df,nr=rank+dr;if(nf>=0&&nf<8&&nr>=0&&nr<8)addSq(nr*8+nf);
+      });
+    } else if(piece==='b'){slide(1,1);slide(1,-1);slide(-1,1);slide(-1,-1);}
+    else if(piece==='r'){slide(1,0);slide(-1,0);slide(0,1);slide(0,-1);}
+    else if(piece==='q'){slide(1,1);slide(1,-1);slide(-1,1);slide(-1,-1);slide(1,0);slide(-1,0);slide(0,1);slide(0,-1);}
+    else if(piece==='k'){[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]].forEach(([df,dr])=>{
+      const nf=file+df,nr=rank+dr;if(nf>=0&&nf<8&&nr>=0&&nr<8)addSq(nr*8+nf);
+    });}
+    setLegalMoves(moves);
+  };
+
+  const requestHints=()=>send({action:'get_hints'});
+  const resign=()=>send({action:'resign'});
+
+  const moveListPairs=[];
+  for(let i=0;i<moveHistory.length;i+=2){
+    moveListPairs.push({num:Math.floor(i/2)+1,w:moveHistory[i],b:moveHistory[i+1]});
+  }
+
+  const isMyTurn=gameState&&!thinking&&(
+    (gameState.turn==='white'&&humanColor==='white')||(gameState.turn==='black'&&humanColor==='black')
+  );
+  const flipped=humanColor==='black';
+
+  return(
+    <div className="app">
+      {/* Header */}
+      <div className="header">
+        <div className="logo">Chess<span>Mind</span></div>
+        <div style={{fontSize:12,color:'var(--muted)',fontFamily:'Space Mono'}}>
+          Alpha-Beta engine · depth {difficulty==='beginner'?2:difficulty==='intermediate'?5:difficulty==='hard'?8:12}
+        </div>
+        <div className="header-right" style={{display:'flex',gap:10,alignItems:'center'}}>
+          <div className={`conn-dot ${connected===true?'connected':connected==='connecting'?'connecting':'disconnected'}`}/>
+          <span style={{fontSize:12,color:'var(--muted)'}}>
+            {connected===true?'Connected':connected==='connecting'?'Connecting...':'Disconnected'}
+          </span>
+        </div>
+      </div>
+
+      {/* Left panel */}
+      <div className="left-panel">
+        <div>
+          <div className="section-label">Setup</div>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            <select value={difficulty} onChange={e=>setDifficulty(e.target.value)} disabled={thinking}>
+              <option value="beginner">Beginner (~800)</option>
+              <option value="intermediate">Intermediate (~1400)</option>
+              <option value="hard">Hard (~1800)</option>
+              <option value="expert">Expert (~2100)</option>
+            </select>
+            <select value={humanColor} onChange={e=>setHumanColor(e.target.value)} disabled={thinking}>
+              <option value="white">Play as White</option>
+              <option value="black">Play as Black</option>
+            </select>
+            <button className="btn btn-primary" onClick={startGame} disabled={thinking||connected!==true}>
+              {gameStarted?'New Game':'Start Game'}
+            </button>
+          </div>
+        </div>
+
+        {gameStarted&&(
+          <>
+            <div>
+              <div className="section-label">Status</div>
+              <div className={`status ${statusType}`}>
+                {thinking&&<span className="thinking-dot" style={{display:'inline-block',marginRight:6}}/>}
+                {statusMsg}
+              </div>
+            </div>
+            <div>
+              <div className="section-label">Captured</div>
+              <div style={{fontSize:11,color:'var(--muted)',marginBottom:4}}>White captured</div>
+              <div className="captured">
+                {capturedBlack.map((p,i)=><span key={i}>{PIECES[p]}</span>)}
+              </div>
+              <div style={{fontSize:11,color:'var(--muted)',margin:'6px 0 4px'}}>Black captured</div>
+              <div className="captured">
+                {capturedWhite.map((p,i)=><span key={i}>{PIECES[p]}</span>)}
+              </div>
+            </div>
+            <div style={{marginTop:'auto',display:'flex',flexDirection:'column',gap:8}}>
+              <button className="btn btn-danger" onClick={resign} disabled={thinking||!gameStarted}>
+                Resign
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Center — board */}
+      <div className="center">
+        <div style={{display:'flex',alignItems:'flex-start',gap:16}}>
+          <EvalBar evalBar={evalBar} boardSize={480}/>
+          <ChessBoard
+            fen={fen}
+            lastMove={lastMove}
+            hints={showHints?hints:[]}
+            legalMoves={legalMoves}
+            onSquareClick={handleSquareClick}
+            selected={selected}
+            flipped={flipped}
+            inCheck={gameState?.is_check}
+            humanColor={humanColor}
+          />
+        </div>
+      </div>
+
+      {/* Right panel */}
+      <div className="right-panel">
+
+        {/* Stockfish hints */}
+        <div>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+            <div className="section-label" style={{margin:0}}>Stockfish Hints</div>
+            <button
+              className="btn btn-ghost"
+              style={{padding:'4px 10px',fontSize:12}}
+              onClick={requestHints}
+              disabled={!isMyTurn||!gameStarted}
+            >
+              Get hints
+            </button>
+          </div>
+          {hints.length>0?(
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {hints.map(h=>(
+                <div key={h.rank} className="hint-card" onClick={()=>{
+                  if(isMyTurn){ send({action:'human_move',move:h.move}); setHints([]); setShowHints(false); }
+                }}>
+                  <div className={`hint-rank r${h.rank}`}>
+                    {h.rank===1?'Best move':h.rank===2?'Good move':'Alternative'}
+                  </div>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                    <div className="hint-move">{h.move}</div>
+                    <div style={{fontSize:13,fontFamily:'Space Mono',color:h.score_cp>0?'var(--green)':h.score_cp<0?'var(--red)':'var(--muted)'}}>
+                      {h.score_text}
+                    </div>
+                  </div>
+                  {h.continuation?.length>0&&(
+                    <div className="hint-cont">{h.continuation.join(' ')}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ):(
+            <div style={{fontSize:12,color:'var(--muted)',padding:'8px 0'}}>
+              {gameStarted?'Click "Get hints" for Stockfish suggestions':'Start a game first'}
+            </div>
+          )}
+        </div>
+
+        {/* Engine stats */}
+        <div>
+          <div className="section-label">Engine Stats</div>
+          <div style={{border:'1px solid var(--border)',borderRadius:8,overflow:'hidden'}}>
+            {[
+              ['Depth',engineInfo?`${engineInfo.depth}`:'—'],
+              ['Score',engineInfo?`${engineInfo.score > 0?'+':''}${(engineInfo.score/100).toFixed(2)}`:'—'],
+              ['Nodes',engineInfo?engineInfo.nodes.toLocaleString():'—'],
+              ['NPS',engineInfo?`${(engineInfo.nps/1000).toFixed(0)}k`:'—'],
+            ].map(([l,v])=>(
+              <div className="stat-row" key={l} style={{padding:'7px 12px'}}>
+                <span className="stat-label">{l}</span>
+                <span className="stat-value">{v}</span>
+              </div>
+            ))}
+          </div>
+          {engineInfo?.pv&&(
+            <div style={{marginTop:8}}>
+              <div className="section-label">Best line</div>
+              <div className="pv-line">{engineInfo.pv}</div>
+            </div>
+          )}
+        </div>
+
+        {/* Move history */}
+        <div>
+          <div className="section-label">Move history</div>
+          <div className="move-list">
+            {moveListPairs.map(({num,w,b})=>(
+              <div className="move-row" key={num}>
+                <span className="move-num">{num}.</span>
+                <span className="move-san">{w?.move||''}</span>
+                <span className="move-san">{b?.move||''}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
