@@ -381,6 +381,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     try:
         while True:
             raw = await websocket.receive_text()
+            print(f"[WS] Received message: {raw}")
             msg = json.loads(raw)
             action = msg.get("action")
 
@@ -461,11 +462,15 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
                             "state": {**session.get_state(), "resigned": True}})
 
     except WebSocketDisconnect:
-        pass
+        print(f"[WS] Client disconnected for session: {session_id}")
     except Exception as e:
-        print(f"WS error: {e}")
+        import traceback
+        print(f"WS error for session {session_id}: {e}")
+        traceback.print_exc()
     finally:
-        if session: session.close()
+        if session:
+            print(f"[WS] Closing session: {session_id}")
+            session.close()
         sessions.pop(session_id, None)
 
 
