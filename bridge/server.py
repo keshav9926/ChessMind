@@ -20,6 +20,25 @@ import re
 import threading
 import queue
 from typing import Optional
+import sys
+
+# ─── Tee Logging ──────────────────────────────────────────────────────────────
+class Tee:
+    def __init__(self, filename):
+        self.file = open(filename, "a", encoding="utf-8", buffering=1)
+        self.stdout = sys.stdout
+
+    def write(self, data):
+        self.file.write(data)
+        self.stdout.write(data)
+
+    def flush(self):
+        self.file.flush()
+        self.stdout.flush()
+
+log_path = os.path.join(os.path.dirname(__file__), "server.log")
+sys.stdout = Tee(log_path)
+sys.stderr = sys.stdout
 
 app = FastAPI(title="ChessMind Bridge")
 
@@ -45,6 +64,16 @@ async def health():
         "engine_path": CHESSMIND_PATH,
         "engine_exists": os.path.exists(CHESSMIND_PATH) if 'CHESSMIND_PATH' in globals() else False
     }
+
+@app.get("/logs")
+async def get_logs():
+    import os
+    log_path = os.path.join(os.path.dirname(__file__), "server.log")
+    if os.path.exists(log_path):
+        with open(log_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        return {"logs": lines[-150:]}
+    return {"logs": ["Log file not found."]}
 
 # Mount the entire frontend directory just in case there are images/css
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
@@ -337,7 +366,13 @@ sessions: dict[str, GameSession] = {}
 # ─── WebSocket endpoint ───────────────────────────────────────────────────────
 @app.websocket("/ws/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
-    await websocket.accept()
+    print(f"[WS] Connection attempt for session: {session_id}")
+    try:
+        await websocket.accept()
+        print(f"[WS] Connection accepted for session: {session_id}")
+    except Exception as e:
+        print(f"[WS] Connection accept failed for session {session_id}: {e}")
+        raise e
     session: Optional[GameSession] = None
 
     async def send(data: dict):
