@@ -37,6 +37,15 @@ FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend")
 async def get_index():
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
 
+@app.get("/health")
+async def health():
+    import os
+    return {
+        "status": "ok",
+        "engine_path": CHESSMIND_PATH,
+        "engine_exists": os.path.exists(CHESSMIND_PATH) if 'CHESSMIND_PATH' in globals() else False
+    }
+
 # Mount the entire frontend directory just in case there are images/css
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
