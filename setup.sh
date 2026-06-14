@@ -115,13 +115,14 @@ fi
 # ─── Step 5: Copy engine to bridge ───────────────────────────────────────────
 head "Step 5 — Setting up bridge"
 if [ -f "$SCRIPT_DIR/engine/chessmind" ]; then
-    cp chessmind "$SCRIPT_DIR/bridge/chessmind"
+    cp "$SCRIPT_DIR/engine/chessmind" "$SCRIPT_DIR/bridge/chessmind"
     ok "Engine binary copied to bridge/"
 elif [ -f "$SCRIPT_DIR/bridge/chessmind" ]; then
     ok "Engine binary already present in bridge/"
 else
     fail "Engine binary not found."
 fi
+chmod +x "$SCRIPT_DIR/bridge/chessmind" 2>/dev/null || true
 
 # Quick engine sanity check
 ENGINE_TEST=$(echo -e "uci\nisready\nquit" | "$SCRIPT_DIR/bridge/chessmind" 2>/dev/null)

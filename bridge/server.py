@@ -91,6 +91,15 @@ DIFFICULTY = {
 # ─── UCI Engine wrapper ───────────────────────────────────────────────────────
 class UCIEngine:
     def __init__(self, path: str):
+        if os.name != 'nt':
+            try:
+                import stat
+                if os.path.exists(path):
+                    st = os.stat(path)
+                    os.chmod(path, st.st_mode | stat.S_IEXEC)
+            except Exception as e:
+                print(f"[WARN] Failed to chmod +x {path}: {e}")
+
         self.process = subprocess.Popen(
             [path],
             stdin=subprocess.PIPE,

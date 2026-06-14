@@ -32,6 +32,7 @@
  */
 
 #include "eval.h"
+#include <chrono>
 
 /// Helper: Find least significant bit (first set bit)
 /// Time: O(1) - hardware instruction (count trailing zeros)
@@ -342,7 +343,7 @@ Score Evaluator::evalSide(Board& b, int color, bool endgame){
     // - Endgame: King activity matters, center control different
     
     static const int* PST_TABLE[6][2]={
-        {PST::PAWN_MG,   PST::PAWN_MG},    // Pawn (same both phases)
+        {PST::PAWN_MG,   PST::PAWN_EG},    // Pawn (different in endgame)
         {PST::KNIGHT_MG, PST::KNIGHT_MG},  // Knight (not split yet)
         {PST::BISHOP_MG, PST::BISHOP_MG},  // Bishop
         {PST::ROOK_MG,   PST::ROOK_MG},    // Rook
@@ -478,5 +479,19 @@ Score Evaluator::evaluate(Board& b){
     // Minimax expects scores from current player's POV
     // If black to move: negate score so positive = black winning
     // If white to move: keep score as-is (positive = white winning)
-    return (b.sideToMove==WHITE) ? score : -score;
+    Score finalScore = (b.sideToMove==WHITE) ? score : -score;
+
+    // ─── Early Game Positional Randomization ───────────────────
+    if (b.fullMove <= 10) {
+        static uint64_t gEvalSeed = 0;
+        static bool gEvalSeedInitialized = false;
+        if (!gEvalSeedInitialized) {
+            gEvalSeed = (uint64_t)std::chrono::steady_clock::now().time_since_epoch().count();
+            gEvalSeedInitialized = true;
+        }
+        int offset = ((b.hash ^ gEvalSeed) % 31) - 15; // -15 to +15 centipawns
+        finalScore += offset;
+    }
+
+    return finalScore;
 }

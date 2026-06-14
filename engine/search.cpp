@@ -20,6 +20,7 @@ int Search::mvvLva(int victim, int attacker) const {
 
 int Search::scoreMove(Board& b, Move m, int ply, Move ttMove) const {
     if(m==ttMove) return 2000000;
+    if(movePromo(m)!=6) return 1500000 + PIECE_VALUE[movePromo(m)];
     if(moveIsCapture(m)) return 1000000 + mvvLva(moveCap(m), getMvPiece(m));
     if(killerMoves[ply][0]==m) return 900000;
     if(killerMoves[ply][1]==m) return 890000;
@@ -47,7 +48,7 @@ Score Search::quiescence(Board& b, Score alpha, Score beta, int ply){
 
     for(Move m : captures){
         if(stop || timeUp()){ stop=true; break; }
-        if(stand_pat + PIECE_VALUE[moveCap(m)] + 200 < alpha) continue;
+        if(stand_pat + PIECE_VALUE[moveCap(m)] + 200 < alpha && movePromo(m) == 6) continue;
         b.makeMove(m);
         Score score = -quiescence(b, -beta, -alpha, ply+1);
         b.undoMove(m);
@@ -99,9 +100,12 @@ Score Search::alphaBeta(Board& b, int depth, int ply, Score alpha, Score beta, b
     }
 
     // Reverse futility pruning
+    Score staticEval = 0;
+    if(depth <= 3) {
+        staticEval = Evaluator::evaluate(b);
+    }
     if(!isPV && !inCheck && depth <= 3){
-        Score se = Evaluator::evaluate(b);
-        if(se - 120*depth >= beta) return se - 120*depth;
+        if(staticEval - 120*depth >= beta) return staticEval - 120*depth;
     }
 
     auto moves = MoveGen::generateLegal(b);
@@ -115,6 +119,13 @@ Score Search::alphaBeta(Board& b, int depth, int ply, Score alpha, Score beta, b
     int   searched  = 0;
 
     for(Move m : moves){
+        // Futility pruning at depth 1 (skip quiet moves if position is bad)
+        if(depth == 1 && !isPV && !inCheck && !moveIsCapture(m) && movePromo(m) == 6) {
+            if(staticEval + 130 < alpha) {
+                continue;
+            }
+        }
+
         b.makeMove(m);
         Score score;
 
@@ -123,10 +134,14 @@ Score Search::alphaBeta(Board& b, int depth, int ply, Score alpha, Score beta, b
         } else {
             int reduction = 0;
             if(depth >= 3 && searched >= 3 && !moveIsCapture(m) && !inCheck){
-                reduction = 1;
-                if(searched >= 6)  reduction = 2;
-                if(searched >= 12) reduction = 3;
-                if(isPV) reduction = std::max(0, reduction-1);
+                bool isKiller = (m == killerMoves[ply][0] || m == killerMoves[ply][1]);
+                int historyScore = historyTable[b.sideToMove][getMvPiece(m)][moveTo(m)];
+                if(!isKiller && historyScore < 10000) {
+                    reduction = 1;
+                    if(searched >= 6)  reduction = 2;
+                    if(searched >= 12) reduction = 3;
+                    if(isPV) reduction = std::max(0, reduction-1);
+                }
             }
             score = -alphaBeta(b, depth-1-reduction, ply+1, -alpha-1, -alpha, true);
             if(score > alpha && reduction > 0)

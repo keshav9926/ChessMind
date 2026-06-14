@@ -14,7 +14,7 @@
 class OpeningBook {
 public:
     OpeningBook(){
-        srand(42); // deterministic for testing; change for variety
+        srand((unsigned int)time(nullptr));
         build();
     }
 

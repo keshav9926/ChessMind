@@ -7,6 +7,7 @@
 #include <sstream>
 #include <algorithm>
 #include <utility>
+#include <ctime>
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
 #include <functional>
@@ -106,6 +107,7 @@ Move parseUCIMove(const std::string& s, Board& b){
 int main(){
     std::ios::sync_with_stdio(false);
     std::cin.tie(nullptr);
+    srand((unsigned int)time(nullptr));
     initAll();
     gBoard.reset();
 
