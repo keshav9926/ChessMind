@@ -1606,14 +1606,14 @@ function App(){
 
           {/* Center board area */}
           <div className="board-area">
-            {/* Top Player (AI if human is white, Human if human is black) */}
+            {/* Top Player (AI opponent) */}
             <div className="player-bar">
               <div className="player-info">
                 <div className="player-avatar">
-                  {humanColor === 'white' ? <i className="fa-solid fa-robot"></i> : <i className="fa-solid fa-user"></i>}
+                  <i className="fa-solid fa-robot"></i>
                 </div>
                 <div className="player-name">
-                  {humanColor === 'white' ? `ChessMind AI (${difficulty})` : 'You'}
+                  {`ChessMind AI (${difficulty}) ${humanColor === 'white' ? '⚫' : '⚪'}`}
                 </div>
               </div>
               <div className="captured-container">
@@ -1652,14 +1652,14 @@ function App(){
               />
             </div>
 
-            {/* Bottom Player (Human if human is white, AI if human is black) */}
+            {/* Bottom Player (Human) */}
             <div className="player-bar">
               <div className="player-info">
                 <div className="player-avatar">
-                  {humanColor === 'white' ? <i className="fa-solid fa-user"></i> : <i className="fa-solid fa-robot"></i>}
+                  <i className="fa-solid fa-user"></i>
                 </div>
                 <div className="player-name">
-                  {humanColor === 'white' ? 'You' : `ChessMind AI (${difficulty})`}
+                  {`You ${humanColor === 'white' ? '⚪' : '⚫'}`}
                 </div>
               </div>
               <div className="captured-container">
