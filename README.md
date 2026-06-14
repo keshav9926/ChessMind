@@ -1,7 +1,9 @@
 # ChessMind ♟️
 **A High-Performance Custom C++ Minimax Chess Engine & Real-time Cyberpunk Web Interface**
 
-🎮 **Play Chess (Local Server)**: [http://localhost:8000](http://localhost:8000) *(Requires running `run.bat` or `./run.sh` first)*
+🎮 **Play Live (Global Deployment)**: [https://dsa-project-k2ez.onrender.com](https://dsa-project-k2ez.onrender.com)
+
+🎮 **Play Locally**: [http://localhost:8000](http://localhost:8000) *(Requires running `run.bat` or `./run.sh` first)*
 
 🔗 **Project Repository**: [GitHub - keshav9926/DSA-project-](https://github.com/keshav9926/DSA-project-)
 
