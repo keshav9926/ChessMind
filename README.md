@@ -1,6 +1,8 @@
 # ChessMind ♟️
 **A High-Performance Custom C++ Minimax Chess Engine & Real-time Cyberpunk Web Interface**
 
+🎮 **Play Chess (Local Server)**: [http://localhost:8000](http://localhost:8000) *(Requires running `run.bat` or `./run.sh` first)*
+
 🔗 **Project Repository**: [GitHub - keshav9926/DSA-project-](https://github.com/keshav9926/DSA-project-)
 
 ChessMind is an end-to-end, multi-tiered chess platform featuring a custom-built, highly optimized C++ chess engine communicating via the UCI protocol with a lightweight FastAPI/WebSocket bridge, rendered in a stunning cyberpunk retro-classic neon React dashboard. It includes real-time evaluation, automatic Stockfish suggestions, and difficulty levels.
