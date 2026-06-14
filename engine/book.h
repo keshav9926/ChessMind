@@ -5,6 +5,8 @@
 #include <vector>
 #include <cstdlib>
 #include <ctime>
+#include <chrono>
+#include <random>
 
 // ─── Opening book ─────────────────────────────────────────────────────────────
 // Maps FEN position key (piece placement + side) to list of good book moves
@@ -14,7 +16,8 @@
 class OpeningBook {
 public:
     OpeningBook(){
-        srand((unsigned int)time(nullptr));
+        uint64_t seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+        rng.seed(seed);
         build();
     }
 
@@ -25,10 +28,12 @@ public:
         auto it = book.find(key);
         if(it == book.end()) return "";
         const auto& moves = it->second;
-        return moves[rand() % moves.size()];
+        std::uniform_int_distribution<size_t> dist(0, moves.size() - 1);
+        return moves[dist(rng)];
     }
 
 private:
+    mutable std::mt19937 rng;
     std::unordered_map<std::string, std::vector<std::string>> book;
 
     static std::string fenKey(const std::string& fen){
