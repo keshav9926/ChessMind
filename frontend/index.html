@@ -1315,6 +1315,8 @@ function App(){
       setSelected(null);
       setLegalMoves([]);
       setGameStarted(true);
+      if(msg.human_color) setHumanColor(msg.human_color);
+      if(msg.difficulty) setDifficulty(msg.difficulty);
       setStatusMsg('Game started — your turn!');
       setStatusType('info');
       prevFen.current=msg.state.fen;
