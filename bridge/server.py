@@ -71,6 +71,21 @@ if os.name == 'nt':
             if os.path.exists(p):
                 CHESSMIND_PATH = p
                 break
+
+# Fallback check on Linux/macOS
+else:
+    if CHESSMIND_PATH == "./chessmind" or not os.path.exists(CHESSMIND_PATH):
+        possible_paths = [
+            os.path.join(os.path.dirname(__file__), "chessmind"),
+            os.path.abspath("chessmind"),
+            os.path.abspath("bridge/chessmind"),
+            os.path.abspath("../bridge/chessmind"),
+            "./chessmind"
+        ]
+        for p in possible_paths:
+            if os.path.exists(p):
+                CHESSMIND_PATH = p
+                break
     
     # Try finding stockfish in PATH or common places
     if not STOCKFISH_PATH:
@@ -421,6 +436,8 @@ async def _ai_move(session: GameSession, send):
         )
 
     result = await loop.run_in_executor(None, lambda: session.get_engine_move(on_info=on_info))
+    if "error" in result:
+        await send({"type": "engine_log", "log": f"info string ERROR: {result['error']}"})
     ai_uci = result.get("move", "")
 
     if ai_uci and ai_uci != "0000":
