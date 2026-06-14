@@ -188,12 +188,18 @@ class UCIEngine:
             return ""
 
     def _wait_for(self, token: str, timeout=10.0) -> list[str]:
+        import time
         lines = []
+        start_time = time.time()
         while True:
+            if self.process.poll() is not None and self._q.empty():
+                raise RuntimeError(f"Engine process terminated unexpectedly with code {self.process.poll()}")
             line = self._read_line(timeout)
             lines.append(line)
             if token in line:
                 break
+            if time.time() - start_time > timeout:
+                raise TimeoutError(f"Timed out waiting for '{token}' from engine")
         return lines
 
     def new_game(self):
